@@ -13,6 +13,7 @@ dependencies:
   - scipy
   - pytorch
   - torchvision
+  - torch-geometric
   - scikit-image
   - opencv
   - pillow
