@@ -1,0 +1,31 @@
+name : env_mlns_project
+
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - ipykernel
+  - pandas
+  - numpy
+  - scikit-learn
+  - matplotlib
+  - scipy
+  - pytorch
+  - torchvision
+  - scikit-image
+  - opencv
+  - pillow
+  - pip
+  - pip:
+      - jupyter
+      - seaborn
+      - black
+      - mne
+      - tqdm
+      - joblib
+      - xgboost
+      - colorcet
+      - statsmodels
+      - bokeh
+      - networkx
