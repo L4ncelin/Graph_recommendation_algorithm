@@ -1,4 +1,4 @@
-<h1 align="center">Breast Cancer Detection using different filtering methods</h1>
+<h1 align="center">Recommendation system using Graph neural networks</h1>
 
 <p align="center">
   <img src="Docs/Logo_CentraleSupelec.png" width="30%" />
