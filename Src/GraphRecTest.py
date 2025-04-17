@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import init
 from torch.autograd import Variable
+from torch import amp
 import pickle
 import numpy as np
 import time
@@ -19,8 +20,11 @@ from math import sqrt
 import datetime
 import argparse
 import os
+from tqdm import tqdm
+import matplotlib.pyplot as plt
 
-os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1" # Debugging error
+torch.backends.cudnn.benchmark = True # Dynamic optimizations
 
 """
 GraphRec: Graph Neural Networks for Social Recommendation. 
@@ -86,38 +90,112 @@ class GraphRec(nn.Module):
         return self.criterion(scores, labels_list)
 
 
-def train(model, device, train_loader, optimizer, epoch, best_rmse, best_mae):
+def train(model, device, train_loader, optimizer, best_rmse, best_mae, scaler):
     model.train()
+    losses = []
     running_loss = 0.0
-    for i, data in enumerate(train_loader, 0):
+
+    progress_bar = tqdm(enumerate(train_loader, 0), desc="Training", total=len(train_loader), ncols=100)
+
+    for i, data in progress_bar:
         batch_nodes_u, batch_nodes_v, labels_list = data
+
         optimizer.zero_grad()
-        loss = model.loss(batch_nodes_u.to(device), batch_nodes_v.to(device), labels_list.to(device))
-        loss.backward(retain_graph=True)
-        optimizer.step()
+
+        with amp.autocast(device_type=device.type):
+            loss = model.loss(batch_nodes_u.to(device), batch_nodes_v.to(device), labels_list.to(device))
+        
+        # loss.backward(retain_graph=True)
+        # optimizer.step()
+        scaler.scale(loss).backward(retain_graph=True)
+        scaler.step(optimizer)
+        scaler.update()
+        losses.append(loss.item())
         running_loss += loss.item()
         if i % 100 == 0:
-            print('[%d, %5d] loss: %.3f, The best rmse/mae: %.6f / %.6f' % (
-                epoch, i, running_loss / 100, best_rmse, best_mae))
+            avg_loss = running_loss / 100
+            progress_bar.set_postfix(loss=avg_loss, rmse=best_rmse, mae=best_mae)
             running_loss = 0.0
-    return 0
+
+    return np.mean(losses)
 
 
 def test(model, device, test_loader):
     model.eval()
     tmp_pred = []
     target = []
+    losses = []
+    expected_rmse = 99999.0
     with torch.no_grad():
         for test_u, test_v, tmp_target in test_loader:
             test_u, test_v, tmp_target = test_u.to(device), test_v.to(device), tmp_target.to(device)
             val_output = model.forward(test_u, test_v)
+            loss = model.criterion(val_output, tmp_target)
+            losses.append(loss.item())
             tmp_pred.append(list(val_output.data.cpu().numpy()))
             target.append(list(tmp_target.data.cpu().numpy()))
     tmp_pred = np.array(sum(tmp_pred, []))
     target = np.array(sum(target, []))
-    expected_rmse = sqrt(mean_squared_error(tmp_pred, target))
+    try:
+        expected_rmse = sqrt(mean_squared_error(tmp_pred, target))
+    except ValueError:
+        pass
     mae = mean_absolute_error(tmp_pred, target)
-    return expected_rmse, mae
+    return expected_rmse, mae, np.mean(losses)
+
+
+def plot_loss(train_loss, test_loss):
+    """
+    Function to plot the evolution of train and test loss over epochs.
+    """
+    epochs = range(1, len(train_loss) + 1)
+
+    plt.figure(figsize=(8, 6))
+    plt.plot(epochs, train_loss, 'b-', marker='o', label='Train Loss')
+    plt.plot(epochs, test_loss, 'r-', marker='o', label='Test Loss')
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.title("Evolution of Loss (Train vs Test)")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("../Plots/losses_evolution.png")
+    plt.show()
+
+
+def plot_rmse_mae(rmse_list, mae_list):
+    """
+    Function to plot the evolution of RMSE and MAE over epochs,
+    with one Y-axis for RMSE and another for MAE.
+    """
+    epochs = range(1, len(rmse_list) + 1)
+
+    fig, ax1 = plt.subplots(figsize=(8, 6))
+
+    # Plot RMSE
+    color = 'tab:blue'
+    ax1.set_xlabel("Epochs")
+    ax1.set_ylabel("RMSE", color=color)
+    ax1.plot(epochs, rmse_list, color=color, marker='o', label='RMSE')
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax1.grid(True)
+
+    # Create a second axis for MAE
+    ax2 = ax1.twinx()
+    color = 'tab:red'
+    ax2.set_ylabel("MAE", color=color)
+    ax2.plot(epochs, mae_list, color=color, marker='s', label='MAE')
+    ax2.tick_params(axis='y', labelcolor=color)
+
+    # Combine legends from both axes
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
+
+    plt.title("Evolution of RMSE and MAE per Epoch")
+    fig.tight_layout()  # Adjust layout
+    plt.savefig("../Plots/metrics_evolution.png")
+    plt.show()
 
 
 def main():
@@ -135,7 +213,7 @@ def main():
     if torch.cuda.is_available():
         use_cuda = True
     device = torch.device("cuda" if use_cuda else "cpu")
-    print(f"Device choosen : {device}")
+    print(f"Device choosen for computation : {device}")
 
     embed_dim = args.embed_dim
 
@@ -178,7 +256,7 @@ def main():
     num_items = max(history_v_lists) + 1
     num_ratings = ratings_list.__len__()
 
-    print(f"num_items : {num_items}")
+    print(f"Number of points : {len(train_u)}\n")
 
     u2e = nn.Embedding(num_users, embed_dim).to(device)
     v2e = nn.Embedding(num_items, embed_dim).to(device)
@@ -200,18 +278,30 @@ def main():
     # model
     graphrec = GraphRec(enc_u, enc_v_history, r2e).to(device)
     optimizer = torch.optim.RMSprop(graphrec.parameters(), lr=args.lr, alpha=0.9)
+    scaler = amp.GradScaler(device.type)
 
     best_rmse = 9999.0
     best_mae = 9999.0
     endure_count = 0
 
+    # Store for plotting
+    train_loss = []
+    test_loss = []
+    rmse_list = []
+    mae_list = []
+
     for epoch in range(1, args.epochs + 1):
 
-        train(graphrec, device, train_loader, optimizer, epoch, best_rmse, best_mae)
-        expected_rmse, mae = test(graphrec, device, test_loader)
-        # please add the validation set to tune the hyper-parameters based on your datasets.
+        mean_loss_train = train(graphrec, device, train_loader, optimizer, best_rmse, best_mae, scaler)
+        train_loss.append(mean_loss_train)
 
-        # early stopping (no validation set in toy dataset)
+        expected_rmse, mae, mean_loss_test = test(graphrec, device, test_loader)
+
+        rmse_list.append(expected_rmse)
+        mae_list.append(mae)
+        test_loss.append(mean_loss_test)
+
+        # early stopping 
         if best_rmse > expected_rmse:
             best_rmse = expected_rmse
             best_mae = mae
@@ -222,7 +312,14 @@ def main():
 
         if endure_count > 5:
             break
+    
+    # Plot les graphiques après l'entraînement
+    plot_loss(train_loss, test_loss)
+    plot_rmse_mae(rmse_list, mae_list)
 
+    # Save model
+    torch.save(graphrec.state_dict(), "graphrec_model.pth")
+    print("Model saved successfully !")
 
 if __name__ == "__main__":
     main()
