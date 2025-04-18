@@ -321,7 +321,7 @@ def main():
 
     # Load model
     graphrec = GraphRec(enc_u, enc_v_history, r2e).to(device)
-    graphrec.load_state_dict(torch.load("graphrec_model.pth", map_location=device))
+    graphrec.load_state_dict(torch.load("../Data/GraphRecComputation/graphrec_model.pth", map_location=device))
     graphrec.eval()
 
 
@@ -334,12 +334,12 @@ def main():
     item_embeddings = graphrec.enc_v_history.features.weight
 
     # Import
-    with open("categories_by_index.pkl", "rb") as f:
+    with open("../Data/GraphRecComputation/categories_by_index.pkl", "rb") as f:
         categories_by_index = pickle.load(f)
 
     #plot_embeddings(item_embeddings, title="Item Embeddings (t-SNE)")
     #plot_embeddings_3d(item_embeddings, title="Item Embeddings (t-SNE 3D)")
-    plot_embeddings_3d_colored(item_embeddings, labels=categories_by_index, title="Item Embeddings by Category (t-SNE 3D)")
+    plot_embeddings_3d_colored(item_embeddings, labels=categories_by_index, title="Item Embeddings by Category (t-SNE 3D)", sample_size=500)
     plot_embeddings_3d_kmeans(item_embeddings, title="Item Embeddings by Category (t-SNE 3D)", sample_size=500)
 
     plot_similarity_heatmap(user_embeddings, title="User Embeddings Similarity", sample_size=400, n_clusters=10)
@@ -347,10 +347,10 @@ def main():
 
 
     # Import
-    with open("../Src/prod2idx.pkl", "rb") as f:
+    with open("../Data/GraphRecComputation/prod2idx.pkl", "rb") as f:
         prod2idx = pickle.load(f)
 
-    ratings_df = pd.read_csv("../Src/ratings_df.csv", sep=";", low_memory=False)
+    ratings_df = pd.read_csv("../Data/GraphRecComputation/ratings_df.csv", sep=";", low_memory=False)
     idx2prod = {v: k for k, v in prod2idx.items()}
 
     plot_cluster_category_distribution(item_embeddings, idx2prod, ratings_df, n_clusters=10)

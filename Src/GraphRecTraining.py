@@ -318,7 +318,7 @@ def main():
     plot_rmse_mae(rmse_list, mae_list)
 
     # Save model
-    torch.save(graphrec.state_dict(), "graphrec_model.pth")
+    torch.save(graphrec.state_dict(), "../Data/GraphRecComputation/graphrec_model.pth")
     print("Model saved successfully !")
 
 if __name__ == "__main__":
