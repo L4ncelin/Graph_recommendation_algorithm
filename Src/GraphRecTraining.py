@@ -30,17 +30,6 @@ torch.backends.cudnn.benchmark = True # Dynamic optimizations
 GraphRec: Graph Neural Networks for Social Recommendation. 
 Wenqi Fan, Yao Ma, Qing Li, Yuan He, Eric Zhao, Jiliang Tang, and Dawei Yin. 
 In Proceedings of the 28th International Conference on World Wide Web (WWW), 2019. Preprint[https://arxiv.org/abs/1902.07243]
-
-If you use this code, please cite our paper:
-```
-@inproceedings{fan2019graph,
-  title={Graph Neural Networks for Social Recommendation},
-  author={Fan, Wenqi and Ma, Yao and Li, Qing and He, Yuan and Zhao, Eric and Tang, Jiliang and Yin, Dawei},
-  booktitle={WWW},
-  year={2019}
-}
-```
-
 """
 
 
@@ -102,11 +91,9 @@ def train(model, device, train_loader, optimizer, best_rmse, best_mae, scaler):
 
         optimizer.zero_grad()
 
-        with amp.autocast(device_type=device.type):
+        with amp.autocast(device_type=device.type): # (fp16)
             loss = model.loss(batch_nodes_u.to(device), batch_nodes_v.to(device), labels_list.to(device))
         
-        # loss.backward(retain_graph=True)
-        # optimizer.step()
         scaler.scale(loss).backward(retain_graph=True)
         scaler.step(optimizer)
         scaler.update()
@@ -233,14 +220,11 @@ def main():
     social_adj_lists= ciao_graph_data["social_adj_lists"]
     ratings_list    = ciao_graph_data["ratings_list"]
     """
-    ## toy dataset 
     history_u_lists, history_ur_lists:  user's purchased history (item set in training set), and his/her rating score (dict)
     history_v_lists, history_vr_lists:  user set (in training set) who have interacted with the item, and rating score (dict)
     
     train_u, train_v, train_r: training_set (user, item, rating)
     test_u, test_v, test_r: testing set (user, item, rating)
-    
-    # please add the validation set
     
     social_adj_lists: user's connected neighborhoods
     ratings_list: rating value from 0.5 to 4.0 (8 opinion embeddings)
