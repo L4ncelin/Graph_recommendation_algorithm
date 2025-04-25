@@ -1,0 +1,28 @@
+name: env_mlns_project
+
+channels:
+  - pytorch
+  - pyg       
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python >=3.10
+  - ipykernel
+  - pandas
+  - numpy
+  - scikit-learn
+  - matplotlib
+  - tqdm
+  - networkx
+  - pytorch 
+  - torchvision
+  - torchaudio
+  - pyg::pyg-lib        
+  - pyg::torch-scatter
+  - pyg::torch-sparse
+  - pyg::torch-geometric
+  - pip
+
+  - pip:
+      - torchmetrics    
