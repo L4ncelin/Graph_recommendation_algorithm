@@ -41,11 +41,11 @@ GraphRec yielded an MAE of 0.75 and an RMSE of 1.15, closely matching results fr
 
 <p align="center">
 
-| Model      | MAE    | RMSE   |
-|------------|--------|--------|
-| LightGCN   | 0.4682 | 0.5961 |
-| SocialMF   | 0.7808 | 1.0554 |
-| GraphRec   | 0.7500 | 1.1500 |
+| Model      | MAE    | RMSE   | Epochs |
+|------------|--------|--------|--------|
+| LightGCN   | 0.4682 | 0.5961 |20      |
+| SocialMF   | 0.7808 | 1.0554 |15      |
+| GraphRec   | 0.7500 | 1.1500 |10      |
 
 </p>
 
