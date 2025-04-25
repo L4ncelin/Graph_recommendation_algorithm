@@ -1,0 +1,16 @@
+2025-04-18 23:20:34,819 - SocialMF - INFO - ### model configuration ###
+2025-04-18 23:20:34,819 - SocialMF - INFO - ratings=./dataset/Ciao/ratings.txt
+2025-04-18 23:20:34,819 - SocialMF - INFO - social=./dataset/Ciao/trusts.txt
+2025-04-18 23:20:34,819 - SocialMF - INFO - ratings.setup=-columns 0 1 2
+2025-04-18 23:20:34,819 - SocialMF - INFO - social.setup=-columns 0 1 2
+2025-04-18 23:20:34,819 - SocialMF - INFO - model.name=SocialMF
+2025-04-18 23:20:34,819 - SocialMF - INFO - evaluation.setup=-ap 0.2
+2025-04-18 23:20:34,819 - SocialMF - INFO - item.ranking=off -topN 10
+2025-04-18 23:20:34,819 - SocialMF - INFO - num.factors=5
+2025-04-18 23:20:34,819 - SocialMF - INFO - num.max.epoch=15
+2025-04-18 23:20:34,819 - SocialMF - INFO - learnRate=-init 0.01 -max 1
+2025-04-18 23:20:34,819 - SocialMF - INFO - reg.lambda=-u 0.001 -i 0.001 -b 0.1 -s 0.1
+2025-04-18 23:20:34,819 - SocialMF - INFO - RSTE=-alpha 0.6
+2025-04-18 23:20:34,819 - SocialMF - INFO - output.setup=on -dir ./results/
+2025-04-18 23:21:28,992 - SocialMF - INFO - ###Evaluation Results###
+2025-04-18 23:21:28,992 - SocialMF - INFO - ['MAE:0.776915960464412\n', 'RMSE:1.0477744464661995\n']
